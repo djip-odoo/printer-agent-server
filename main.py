@@ -5,6 +5,7 @@ import base64
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from escpos.printer import Usb
 
 app = FastAPI(
     title="Local Print Agent API",
@@ -46,24 +47,26 @@ STATUS_COMMANDS = {
 
 @app.post("/pos/print/")
 def print_receipt(data: PrintRequest):
-    raster_bytes = base64.b64decode(data.raster_base64)
-    bytes_per_row = (data.width + 7) // 8
-
-    header = b'\x1d' + b'v' + b'0' + b'\x00' + \
-             bytes([bytes_per_row % 256, bytes_per_row // 256]) + \
-             bytes([data.height % 256, data.height // 256])
-    escpos_data = b'\x1b@' + header + raster_bytes + b'\x1b\x64\x03' + b'\x1dV\x00'
-
-    if data.cash_drawer:
-        escpos_data += b'\x1b\x70\x00\x19\x78'
     try:
-        ip, port = data.nw_printer_ip.split(":")
-        printer_status = check_printer_status(ip, int(port))
-        if printer_status:
-            return {"status": "error", "message": printer_status}
+        raster_bytes = base64.b64decode(data.raster_base64)
 
-        with socket.create_connection((ip, int(port)), timeout=10) as s:
-            s.sendall(escpos_data)
+        VENDOR_ID = 0x0fe6  # Example: Epson
+        PRODUCT_ID = 0x811e  # Example: TM-T20
+        printer = Usb(VENDOR_ID, PRODUCT_ID, timeout=0, in_ep=0x82, out_ep=0x01)
+
+        printer._raw(b'\x1b@')
+        bytes_per_row = (data.width + 7) // 8
+
+        header = b'\x1d' + b'v' + b'0' + b'\x00' + \
+                 bytes([bytes_per_row % 256, bytes_per_row // 256]) + \
+                 bytes([data.height % 256, data.height // 256])
+        printer._raw(header + raster_bytes)
+
+        printer._raw(b'\x1b\x64\x03')
+        printer._raw(b'\x1dV\x00')
+
+        if data.cash_drawer:
+            printer.cashdraw(0)
 
         return {"status": "success"}
 
@@ -137,7 +140,7 @@ if __name__ == "__main__":
     uvicorn.run(
         app, 
         host="0.0.0.0", 
-        port=8088, 
+        port=8080, 
         ssl_certfile=os.path.join(ssl_dir, "cert.pem"),
         ssl_keyfile=os.path.join(ssl_dir, "key.pem"),
     )
