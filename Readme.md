@@ -42,6 +42,8 @@ build_windows.bat
 - uvicorn==0.34.3
 - pydantic==2.11.5
 - pyinstaller==6.14.1
+- python-escpos===3.1
+- pyusb===25.2
 
 ---
 
