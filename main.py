@@ -64,11 +64,11 @@ def resource_path(filename: str) -> str:
 # ========== Health ==========
 @app.get("/")
 def read_root():
-    return {"status": "ok", "message": "Printer server is running."}
+    return {"status": "success", "message": "Printer server is running."}
 
 @app.get("/test")
 def test():
-    return {"status": "ok", "message": "Test successful."}
+    return {"status": "success", "message": "Test successful."}
 
 # ========== USB Status ==========
 @app.post("/printer/status-usb")
@@ -102,7 +102,7 @@ def _check_status(vendor_id, product_id):
         response = ep_in.read(ep_in.wMaxPacketSize, timeout=2000)
 
         decoded = decode_status("Printer Status", response)
-        status_text = "ok" if all("OK" in msg or "ready" in msg or "No printer errors" in msg for msg in decoded) else "warning"
+        status_text = "success" if all("OK" in msg or "ready" in msg or "No printer errors" in msg for msg in decoded) else "warning"
         return {"status": status_text, "message": "; ".join(decoded)}
 
     except ValueError:
@@ -149,9 +149,9 @@ def handle_print_job(data: PrintRequest):
         header = b'\x1dv0\x00' + \
                  bytes([bytes_per_row % 256, bytes_per_row // 256]) + \
                  bytes([data.height % 256, data.height // 256])
-        printer._raw(header + raster_bytes)
-        printer._raw(b'\x1bd\x03')
-        printer._raw(b'\x1dV\x00')
+        # printer._raw(header + raster_bytes)
+        # printer._raw(b'\x1bd\x03')
+        # printer._raw(b'\x1dV\x00')
 
         if data.cash_drawer:
             printer.cashdraw(0)
@@ -169,10 +169,10 @@ def handle_print_job(data: PrintRequest):
 @app.post("/pos/print/")
 def print_receipt(data: PrintRequest):
     status = _check_status(data.vendor_id, data.product_id)
-    if status["status"] != "ok":
+    if status["status"] != "success":
         return status
     print_queue.put(data)
-    return {"status": "ok", "message": "Print job queued."}
+    return {"status": "success", "message": "Print job queued."}
 
 # ========== Start Worker Thread ==========
 worker_thread = Thread(target=printer_worker, daemon=True)
