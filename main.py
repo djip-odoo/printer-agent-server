@@ -98,7 +98,6 @@ def handle_print_job(data: PrintRequest):
         logger.info(f"Connecting to printer {vendor_id:04x}:{product_id:04x}...")
         printer = Usb(vendor_id, product_id)
 
-        # Init and print raster
         printer._raw(b'\x1b@')
         bytes_per_row = (data.width + 7) // 8
         header = b'\x1dv0\x00' + \
@@ -107,10 +106,6 @@ def handle_print_job(data: PrintRequest):
         printer._raw(header + raster_bytes)
         printer._raw(b'\n' * 1) 
         printer.cut()
-
-        if data.cash_drawer:
-            printer.cashdraw(0)
-
         logger.info("Print job completed.")
 
     except Exception as e:
@@ -124,9 +119,6 @@ def handle_print_job(data: PrintRequest):
 # ========== Print Endpoint ==========
 @app.post("/pos/print/")
 def print_receipt(data: PrintRequest):
-    status = check_printer_status(data.vendor_id, data.product_id)
-    if status["status"] != "success":
-        return status
     print_queue.put(data)
     return {"status": "success", "message": "Print job queued."}
 

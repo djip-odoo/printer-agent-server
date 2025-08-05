@@ -47,6 +47,7 @@ def decode_status(name, byte_val):
 
 
 def check_printer_status(vendor_id, product_id):
+    device = None 
     try:
         # Convert hex strings (if needed)
         if isinstance(vendor_id, str): vendor_id = int(vendor_id, 16)
