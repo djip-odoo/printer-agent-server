@@ -63,12 +63,15 @@ def test_endpoint():
 
 @app.post("/printer/status-usb")
 def check_usb_status(req: StatusCheckRequest):
+    return _check_status(req.vendor_id, req.product_id)
+
+def _check_status(vendor_id, product_id):
     device = None
     start_time = time.time()
 
     try:
-        vendor_id = int(req.vendor_id, 16)
-        product_id = int(req.product_id, 16)
+        vendor_id = int(vendor_id, 16)
+        product_id = int(product_id, 16)
 
         device = usb.core.find(idVendor=vendor_id, idProduct=product_id)
         if device is None:
@@ -182,6 +185,9 @@ def handle_print_job(data: PrintRequest):
 @app.post("/pos/print/")
 def print_receipt(data: PrintRequest):
     try:
+        status = _check_status(data.vendor_id, data.product_id)
+        if status.get("status") != "ok":
+            return status 
         print_queue.put(data)
         return {"status": "queued", "message": "Print job added to queue"}
     except Exception as e:
