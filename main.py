@@ -104,9 +104,9 @@ def handle_print_job(data: PrintRequest):
         header = b'\x1dv0\x00' + \
                  bytes([bytes_per_row % 256, bytes_per_row // 256]) + \
                  bytes([data.height % 256, data.height // 256])
-        # printer._raw(header + raster_bytes)
-        # printer._raw(b'\x1bd\x03')
-        # printer._raw(b'\x1dV\x00')
+        printer._raw(header + raster_bytes)
+        printer._raw(b'\n' * 1) 
+        printer.cut()
 
         if data.cash_drawer:
             printer.cashdraw(0)
@@ -123,7 +123,7 @@ def handle_print_job(data: PrintRequest):
 # ========== Print Endpoint ==========
 @app.post("/pos/print/")
 def print_receipt(data: PrintRequest):
-    status = _check_status(data.vendor_id, data.product_id)
+    status = check_printer_status(data.vendor_id, data.product_id)
     if status["status"] != "success":
         return status
     print_queue.put(data)
