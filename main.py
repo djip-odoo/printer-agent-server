@@ -121,6 +121,7 @@ def check_usb_status(req: StatusCheckRequest):
             print(f"[CLEANUP ERROR] {cleanup_error}")
 
 # ========== Print Worker ==========
+
 def printer_worker():
     while True:
         data = print_queue.get()
@@ -134,31 +135,45 @@ def printer_worker():
             print_queue.task_done()
 
 def handle_print_job(data: PrintRequest):
-    raster_bytes = base64.b64decode(data.raster_base64)
+    printer = None
 
-    vendor_id = int(data.vendor_id, 16)
-    product_id = int(data.product_id, 16)
+    try:
+        print("⏳ Decoding raster...")
+        raster_bytes = base64.b64decode(data.raster_base64)
 
-    printer = Usb(vendor_id, product_id, timeout=0, in_ep=0x82, out_ep=0x01)
+        vendor_id = int(data.vendor_id, 16)
+        product_id = int(data.product_id, 16)
 
-    if printer.device.is_kernel_driver_active(0):
-        printer.device.detach_kernel_driver(0)
+        print(f"🔍 Connecting to printer {vendor_id:04x}:{product_id:04x}...")
+        printer = Usb(vendor_id, product_id)
 
-    printer._raw(b'\x1b@')  # Initialize printer
+        # Initialize
+        printer._raw(b'\x1b@')
 
-    bytes_per_row = (data.width + 7) // 8
-    header = b'\x1dv0\x00' + \
-             bytes([bytes_per_row % 256, bytes_per_row // 256]) + \
-             bytes([data.height % 256, data.height // 256])
+        # Construct raster header (bit image mode)
+        bytes_per_row = (data.width + 7) // 8
+        header = b'\x1dv0\x00' + \
+                 bytes([bytes_per_row % 256, bytes_per_row // 256]) + \
+                 bytes([data.height % 256, data.height // 256])
 
-    printer._raw(header + raster_bytes)
-    printer._raw(b'\x1bd\x03')  # Feed 3 lines
-    printer._raw(b'\x1dV\x00')  # Cut
+        print("🖨️ Sending raster image...")
+        printer._raw(header + raster_bytes)
 
-    if data.cash_drawer:
-        printer.cashdraw(0)
+        printer._raw(b'\x1bd\x03')  # Feed 3 lines
+        printer._raw(b'\x1dV\x00')  # Cut paper
 
-    usb.util.dispose_resources(printer)
+        if data.cash_drawer:
+            print("💵 Opening cash drawer...")
+            printer.cashdraw(0)
+
+    except Exception as e:
+        print(f"❌ Print job failed: {e}")
+
+    finally:
+        if printer:
+            usb.util.dispose_resources(printer.device)
+            print("✅ Resources released")
+
 
 # ========== Print Endpoint ==========
 @app.post("/pos/print/")
