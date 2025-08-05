@@ -8,12 +8,25 @@ from fastapi.middleware.cors import CORSMiddleware
 from escpos.printer import Usb
 from queue import Queue
 from threading import Thread
+from usb.util import endpoint_direction, ENDPOINT_IN, ENDPOINT_OUT
+import usb.core
+import usb.util
+from check_status import decode_status
 
 app = FastAPI(
     title="Local Print Agent API",
     description="A FastAPI server to communicate with ESC/POS thermal printers over raw sockets.",
     version="1.0.0"
 )
+
+import atexit
+
+def shutdown():
+    print_queue.put(None)
+    worker_thread.join()
+
+atexit.register(shutdown)
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,8 +48,62 @@ class PrintRequest(BaseModel):
     raster_base64: str
     width: int
     height: int
-    nw_printer_ip: str  # Expected format: "ip:port"
+    vendor_id: str
+    product_id: str
     cash_drawer: bool = False
+
+class StatusCheckRequest(BaseModel):
+    vendor_id: str
+    product_id: str
+
+@app.post("/printer/status-usb")
+def check_usb_status(req: StatusCheckRequest):
+    # try:
+        vendor_id = int(req.vendor_id, 16)
+        product_id = int(req.product_id, 16)
+
+        # Find the USB device
+        device = usb.core.find(idVendor=vendor_id, idProduct=product_id)
+        if device is None:
+            raise HTTPException(status_code=404, detail="Printer not found")
+
+        # Detach kernel driver if needed
+        if device.is_kernel_driver_active(0):
+            device.detach_kernel_driver(0)
+
+        device.set_configuration()
+        cfg = device.get_active_configuration()
+        intf = cfg[(0, 0)]
+
+        # Find IN and OUT endpoints
+        ep_out = usb.util.find_descriptor(
+            intf,
+            custom_match=lambda e: endpoint_direction(e.bEndpointAddress) == ENDPOINT_OUT
+        )
+        ep_in = usb.util.find_descriptor(
+            intf,
+            custom_match=lambda e: endpoint_direction(e.bEndpointAddress) == ENDPOINT_IN
+        )
+
+        if ep_out is None or ep_in is None:
+            raise HTTPException(status_code=500, detail="Could not find printer endpoints")
+
+        # Send status command (DLE EOT 1)
+        ep_out.write(b'\x10\x04\x01')
+        response = ep_in.read(ep_in.wMaxPacketSize, timeout=1000)
+
+        decoded = decode_status("Printer Status", response)
+        return {
+            "status": "ok" if all("OK" in msg or "ready" in msg or "No printer errors" in msg for msg in decoded) else "warning",
+            "details": decoded
+        }
+
+    # except ValueError:
+    #     raise HTTPException(status_code=400, detail="Invalid hex format for vendor_id or product_id")
+    # except usb.core.USBError as e:
+    #     raise HTTPException(status_code=500, detail=f"USB communication failed: {e}")
+    # except Exception as e:
+    #     raise HTTPException(status_code=500, detail=f"USB Printer status check failed: {str(e)}")
 
 print_queue = Queue()
 
@@ -55,9 +122,8 @@ def printer_worker():
 def handle_print_job(data: PrintRequest):
     raster_bytes = base64.b64decode(data.raster_base64)
 
-    VENDOR_ID = "0x" + data.vendor_id #0fe6
-    PRODUCT_ID = "0x" + data.product_id #811e
-
+    VENDOR_ID = int(data.vendor_id, 16)
+    PRODUCT_ID = int(data.product_id, 16)
     printer = Usb(VENDOR_ID, PRODUCT_ID, timeout=0, in_ep=0x82, out_ep=0x01)
     
     if printer.device.is_kernel_driver_active(0):
