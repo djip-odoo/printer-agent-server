@@ -4,3 +4,4 @@ dist/
 main.spec
 __pycache__/
 build/*
+node_modules
