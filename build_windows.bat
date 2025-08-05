@@ -5,7 +5,7 @@ call venv\Scripts\activate
 
 echo Installing requirements...
 pip install --upgrade pip
-pip install fastapi uvicorn pydantic pyinstaller
+pip install -r requirements.txt
 
 echo Building executable...
 pyinstaller --onefile ^

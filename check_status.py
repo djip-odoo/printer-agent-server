@@ -82,10 +82,19 @@ def check_printer_status(vendor_id, product_id):
                 if "OK" not in msg and "adequate" not in msg and "online" not in msg and "No printer errors" not in msg:
                     errors.setdefault(name, []).append(msg)
 
-        return {
-            "status": "error" if errors else "success",
-            "message": errors if errors else "Printer is ready"
-        }
+        if errors:
+            flat_errors = "".join(
+                f"{k}: {', '.join(v)}\n" for k, v in errors.items()
+            )
+            return {
+                "status": "error",
+                "message": flat_errors
+            }
+        else:
+            return {
+                "status": "success",
+                "message": "Printer is ready"
+            }
 
     except usb.core.USBError as e:
         return {"status": "error", "message": f"USB communication failed: {str(e)}"}
