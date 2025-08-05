@@ -104,5 +104,5 @@ def check_printer_status(vendor_id, product_id):
         try:
             usb.util.dispose_resources(device)
             usb.util.release_interface(device, 0)
-        except Exception:
-            pass
+        except Exception as e:
+            print(e)

@@ -117,7 +117,8 @@ def handle_print_job(data: PrintRequest):
         logger.error(f"❌ Print job error: {e}")
     finally:
         if printer:
-            usb.util.dispose_resources(printer.device)
+            printer.close()
+            print("closed")
             logger.info("✅ USB resources released.")
 
 # ========== Print Endpoint ==========
