@@ -43,6 +43,7 @@ class PrintRequest(BaseModel):
     raster_base64: str
     width: int
     height: int
+    # nw_printer_ip: str 
     vendor_id: str
     product_id: str
     cash_drawer: bool = False
@@ -141,6 +142,9 @@ def handle_print_job(data: PrintRequest):
         print("⏳ Decoding raster...")
         raster_bytes = base64.b64decode(data.raster_base64)
 
+        # vendor_id = 0x0fe6 #int(data.vendor_id, 16)
+        # product_id = 0x811e #int(data.product_id, 16)
+        
         vendor_id = int(data.vendor_id, 16)
         product_id = int(data.product_id, 16)
 
@@ -173,7 +177,6 @@ def handle_print_job(data: PrintRequest):
         if printer:
             usb.util.dispose_resources(printer.device)
             print("✅ Resources released")
-
 
 # ========== Print Endpoint ==========
 @app.post("/pos/print/")
