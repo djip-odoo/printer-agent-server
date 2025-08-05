@@ -25,6 +25,7 @@ pyinstaller --clean --onefile ^
   --add-data "ssl\\cert.pem;ssl" ^
   --add-data "ssl\\key.pem;ssl" ^
   --add-data "venv\\Lib\\site-packages\\escpos\\capabilities.json;escpos" ^
+  --add-data "libusb\\libusb-1.0.dll;." ^
   main.py
 
 echo ============================
