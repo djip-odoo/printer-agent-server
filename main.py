@@ -13,6 +13,7 @@ from escpos.printer import Usb
 from fastapi.middleware.cors import CORSMiddleware
 from usb.util import endpoint_direction, ENDPOINT_IN, ENDPOINT_OUT
 from check_status import decode_status
+import time
 
 app = FastAPI(
     title="Local Print Agent API",
@@ -59,9 +60,11 @@ def read_root():
 def test_endpoint():
     return {"status": "Test successful"}
 
-# ========== USB Printer Status Check ==========
 @app.post("/printer/status-usb")
 def check_usb_status(req: StatusCheckRequest):
+    device = None
+    start_time = time.time()
+
     try:
         vendor_id = int(req.vendor_id, 16)
         product_id = int(req.product_id, 16)
@@ -89,8 +92,11 @@ def check_usb_status(req: StatusCheckRequest):
         if ep_out is None or ep_in is None:
             raise HTTPException(status_code=500, detail="Could not find printer endpoints")
 
+        # Send DLE EOT 1 to check printer status
         ep_out.write(b'\x10\x04\x01')
-        response = ep_in.read(ep_in.wMaxPacketSize, timeout=5000)
+        # Wait for printer response
+        response = ep_in.read(ep_in.wMaxPacketSize, timeout=2000)
+        print(f"[JOB] Response received at {time.time() - start_time:.3f}s")
 
         decoded = decode_status("Printer Status", response)
         return {
@@ -105,7 +111,14 @@ def check_usb_status(req: StatusCheckRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"USB Printer status check failed: {str(e)}")
     finally:
-        usb.util.dispose_resources(device)
+        try:
+            if device:
+                usb.util.dispose_resources(device)
+                # Explicit release interface and reset
+                usb.util.release_interface(device, 0)
+                device.reset()
+        except Exception as cleanup_error:
+            print(f"[CLEANUP ERROR] {cleanup_error}")
 
 # ========== Print Worker ==========
 def printer_worker():
