@@ -16,7 +16,7 @@ headers = {
   'Content-Type': 'application/json'
 }
 
-for i in range(10):
+for i in range(1):
     response = requests.request("POST", url, headers=headers, data=payload, verify=False)
 
     print(response.text)

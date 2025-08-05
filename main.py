@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from escpos.printer import Usb
 from usb.util import endpoint_direction, ENDPOINT_IN, ENDPOINT_OUT
-from check_status import decode_status
+from check_status import check_printer_status
 
 # ========== Logging ==========
 logging.basicConfig(level=logging.INFO)
@@ -73,52 +73,7 @@ def test():
 # ========== USB Status ==========
 @app.post("/printer/status-usb")
 def check_usb_status(req: StatusCheckRequest):
-    return _check_status(req.vendor_id, req.product_id)
-
-def _check_status(vendor_id, product_id):
-    device = None
-    try:
-        vendor_id = int(vendor_id, 16)
-        product_id = int(product_id, 16)
-
-        device = usb.core.find(idVendor=vendor_id, idProduct=product_id)
-        if device is None:
-            return {"status": "error", "message": "Printer not found."}
-
-        if device.is_kernel_driver_active(0):
-            device.detach_kernel_driver(0)
-
-        device.set_configuration()
-        cfg = device.get_active_configuration()
-        intf = cfg[(0, 0)]
-
-        ep_out = usb.util.find_descriptor(intf, custom_match=lambda e: endpoint_direction(e.bEndpointAddress) == ENDPOINT_OUT)
-        ep_in = usb.util.find_descriptor(intf, custom_match=lambda e: endpoint_direction(e.bEndpointAddress) == ENDPOINT_IN)
-
-        if not ep_out or not ep_in:
-            return {"status": "error", "message": "Could not find printer endpoints."}
-
-        ep_out.write(b'\x10\x04\x01')
-        response = ep_in.read(ep_in.wMaxPacketSize, timeout=2000)
-
-        decoded = decode_status("Printer Status", response)
-        status_text = "success" if all("OK" in msg or "ready" in msg or "No printer errors" in msg for msg in decoded) else "warning"
-        return {"status": status_text, "message": "; ".join(decoded)}
-
-    except ValueError:
-        return {"status": "error", "message": "Invalid vendor_id or product_id format."}
-    except usb.core.USBError as e:
-        return {"status": "error", "message": f"USB communication failed: {e}"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-    finally:
-        try:
-            if device:
-                usb.util.dispose_resources(device)
-                usb.util.release_interface(device, 0)
-                device.reset()
-        except Exception as cleanup_error:
-            logger.warning(f"[CLEANUP ERROR] {cleanup_error}")
+    return check_printer_status(req.vendor_id, req.product_id)
 
 # ========== Worker ==========
 def printer_worker():
