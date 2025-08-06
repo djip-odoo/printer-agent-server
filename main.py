@@ -8,12 +8,14 @@ import atexit
 import logging
 from queue import Queue
 from threading import Thread
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from escpos.printer import Usb
 from usb.util import endpoint_direction, ENDPOINT_IN, ENDPOINT_OUT
 from check_status import check_printer_status
+from get_printer_list import list_usb_printers 
+from fastapi.responses import HTMLResponse
 
 # ========== Logging ==========
 logging.basicConfig(level=logging.INFO)
@@ -62,9 +64,13 @@ def resource_path(filename: str) -> str:
     return os.path.abspath(filename)
 
 # ========== Health ==========
-@app.get("/")
-def read_root():
-    return {"status": "success", "message": "Printer server is running."}
+# @app.get("/")
+# def read_root():
+#     return {"status": "success", "message": "Printer server is running."}
+
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    return list_usb_printers(request)
 
 @app.get("/test")
 def test():
