@@ -14,7 +14,11 @@ pip install --upgrade pip
 pip install -r requirements.txt
 
 :: Check if libusb DLL exists
-if not exist libusb\libusb-1.0.dll (
+if not exist libusb\libusb-1.0_32.dll (
+    echo ERROR: libusb-1.0.dll is missing.
+    goto end
+)
+if not exist libusb\libusb-1.0_64.dll (
     echo ERROR: libusb-1.0.dll is missing.
     goto end
 )

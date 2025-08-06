@@ -18,6 +18,7 @@ echo "🛠️ Building executable with PyInstaller..."
 pyinstaller --clean --onefile \
   --add-data "ssl/cert.pem:ssl" \
   --add-data "ssl/key.pem:ssl" \
+  --add-data "templates/index.html:templates" \
   --add-data "$CAP_JSON:escpos" \
   main.py
 echo "✅ PyInstaller build complete. Binary: dist/main"
