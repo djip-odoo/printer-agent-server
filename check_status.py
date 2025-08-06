@@ -56,9 +56,11 @@ def check_printer_status(vendor_id, product_id):
         device = usb.core.find(idVendor=vendor_id, idProduct=product_id)
         if not device:
             return {"status": "error", "message": "Printer not found"}
-
-        if device.is_kernel_driver_active(0):
-            device.detach_kernel_driver(0)
+        try:
+            if device.is_kernel_driver_active(0):
+                device.detach_kernel_driver(0)
+        except:
+            pass
 
         device.set_configuration()
         cfg = device.get_active_configuration()
