@@ -16,6 +16,26 @@ from usb.util import endpoint_direction, ENDPOINT_IN, ENDPOINT_OUT
 from check_status import check_printer_status
 from get_printer_list import list_usb_printers 
 from fastapi.responses import HTMLResponse
+import ctypes
+import platform
+
+# Only load on Windows
+if platform.system() == "Windows":
+    dll_path = os.path.abspath("libusb/libusb-1.0.dll")
+    try:
+        ctypes.CDLL(dll_path)
+        print(f"[INFO] Successfully loaded DLL from: {dll_path}")
+    except OSError as e:
+        print(f"[ERROR] Failed to load libusb DLL: {e}")
+
+# Get the absolute path to libusb-1.0.dll using a relative path
+dll_path = os.path.join(os.path.dirname(__file__), 'libusb', 'libusb-1.0.dll')
+
+# Load backend with this DLL path
+backend = usb.backend.libusb1.get_backend(find_library=lambda x: dll_path)
+
+# Use backend when finding devices
+devices = usb.core.find(find_all=True, backend=backend)
 
 # ========== Logging ==========
 logging.basicConfig(level=logging.INFO)
@@ -64,10 +84,6 @@ def resource_path(filename: str) -> str:
     return os.path.abspath(filename)
 
 # ========== Health ==========
-# @app.get("/")
-# def read_root():
-#     return {"status": "success", "message": "Printer server is running."}
-
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     return list_usb_printers(request)

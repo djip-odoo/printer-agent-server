@@ -1,8 +1,16 @@
 import usb.core
 import usb.util
 from fastapi.templating import Jinja2Templates
+import os
+import sys
+from starlette.templating import Jinja2Templates
 
-templates = Jinja2Templates(directory="templates")
+if getattr(sys, 'frozen', False):
+    templates_dir = os.path.join(sys._MEIPASS, 'templates')
+else:
+    templates_dir = os.path.join(os.path.dirname(__file__), 'templates')
+
+templates = Jinja2Templates(directory=templates_dir)
 
 def list_usb_printers(request):
     devices = usb.core.find(find_all=True)
