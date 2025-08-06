@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from escpos.printer import Usb
 from usb.util import endpoint_direction, ENDPOINT_IN, ENDPOINT_OUT
 from check_status import check_printer_status
-from get_printer_list import list_usb_printers 
+from get_printer_list import list_usb_printers , printer_list_page
 from fastapi.responses import HTMLResponse
 import ctypes
 import platform
@@ -81,11 +81,11 @@ def resource_path(filename: str) -> str:
 # ========== Health ==========
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
-    return list_usb_printers(request)
+    return printer_list_page(request)
 
-@app.get("/test")
-def test():
-    return {"status": "success", "message": "Test successful."}
+@app.get("/printer-list")
+async def printer_list(request: Request):
+    return {"status": "success", "message": list_usb_printers()}
 
 # ========== USB Status ==========
 @app.post("/printer/status-usb")
