@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from escpos.printer import Usb
 from usb.util import endpoint_direction, ENDPOINT_IN, ENDPOINT_OUT
 from check_status import check_printer_status
-from get_printer_list import list_usb_printers , printer_list_page
+from get_printer_list import list_known_epos_printers , printer_list_page
 from fastapi.responses import HTMLResponse
 import ctypes
 import platform
@@ -85,7 +85,7 @@ async def root(request: Request):
 
 @app.get("/printer-list")
 async def printer_list(request: Request):
-    return {"status": "success", "message": list_usb_printers()}
+    return {"status": "success", "message": list_known_epos_printers()}
 
 # ========== USB Status ==========
 @app.post("/printer/status-usb")
