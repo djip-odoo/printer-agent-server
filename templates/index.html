@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>USB Printers</title>
     <style>
@@ -31,6 +32,25 @@
             color: #555;
         }
 
+        .check-btn {
+            margin-top: 10px;
+            padding: 8px 16px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .check-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .status-msg {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
         .no-printers {
             padding: 20px;
             background: #fff3cd;
@@ -40,20 +60,57 @@
         }
     </style>
 </head>
+
 <body>
     <h1>Connected USB Printers</h1>
 
     {% if printers %}
-        {% for p in printers %}
-            <div class="printer-card">
-                <h2>{{ p.product }}</h2>
-                <p><strong>Manufacturer:</strong> {{ p.manufacturer }}</p>
-                <p><strong>Vendor ID:</strong> {{ p.vendor_id }}</p>
-                <p><strong>Product ID:</strong> {{ p.product_id }}</p>
-            </div>
-        {% endfor %}
+    {% for p in printers %}
+    <div class="printer-card" id="printer-{{ loop.index }}">
+        <h2>{{ p.product }}</h2>
+        <p><strong>Vendor ID:</strong> {{ p.vendor_id }}</p>
+        <p><strong>Product ID:</strong> {{ p.product_id }}</p>
+        <p><strong>Manufacturer:</strong> {{ p.manufacturer }}</p>
+        <p><strong>Vendor Name:</strong> {{ p.vendor_name }}</p>
+        <p><strong>Product:</strong> {{ p.product }}</p>
+        <p><strong>Matched By:</strong> {{ p.matched_by }}</p>
+
+        <button class="check-btn" onclick="checkStatus('{{ p.vendor_id }}', '{{ p.product_id }}', {{ loop.index }})">
+            Check Status
+        </button>
+        <div class="status-msg" id="status-{{ loop.index }}"></div>
+    </div>
+    {% endfor %}
     {% else %}
-        <div class="no-printers">No USB printers found.</div>
+    <div class="no-printers">No USB printers found.</div>
     {% endif %}
+
+    <script>
+        async function checkStatus(vendorId, productId, printerId) {
+            const statusEl = document.getElementById("status-" + printerId);
+            statusEl.textContent = "Checking...";
+
+            try {
+                const res = await fetch("/printer/status-usb", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        vendor_id: vendorId,
+                        product_id: productId
+                    })
+                });
+
+                const data = await res.json();
+                statusEl.textContent = `${data.status.toUpperCase()}: ${data.message}`;
+                statusEl.style.color = data.status === "success" ? "green" : "red";
+            } catch (err) {
+                statusEl.textContent = "ERROR: Unable to reach printer";
+                statusEl.style.color = "red";
+            }
+        }
+    </script>
 </body>
+
 </html>
