@@ -9,7 +9,7 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Target URL
-url = "https://localhost:8080/pos/print/"  # Replace with your actual host
+url = "https://localhost:8088/pos/print/"  # Replace with your actual host
 
 # Fake raster data for testing (e.g., "Hello World" as plain text raster-like)
 def make_test_payload():

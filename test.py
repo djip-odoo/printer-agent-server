@@ -2,7 +2,7 @@
 import requests
 import json
 
-url = "https://0.0.0.0:8080/printer/status-usb"
+url = "https://0.0.0.0:8088/printer/status-usb"
 import urllib3
 
 # Suppress only the InsecureRequestWarning

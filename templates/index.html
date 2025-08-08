@@ -58,11 +58,24 @@
             border-radius: 8px;
             color: #856404;
         }
+
+        .domain-status {
+            margin: 20px 0;
+            padding: 12px;
+            background: #e9ecef;
+            border-radius: 8px;
+        }
     </style>
 </head>
 
 <body>
     <h1>Connected USB Printers</h1>
+
+    <!-- Domain Mapping Check -->
+    <div class="domain-status">
+        <button class="check-btn" onclick="checkDomain()">Check Domain Mapping</button>
+        <div id="domain-result" class="status-msg"></div>
+    </div>
 
     {% if printers %}
     {% for p in printers %}
@@ -108,6 +121,27 @@
             } catch (err) {
                 statusEl.textContent = "ERROR: Unable to reach printer";
                 statusEl.style.color = "red";
+            }
+        }
+
+        async function checkDomain() {
+            const domainResult = document.getElementById("domain-result");
+            domainResult.textContent = "Checking domain mapping...";
+
+            try {
+                const res = await fetch("/check-host");
+                const data = await res.json();
+
+                if (data.status === "ok") {
+                    domainResult.textContent = `✅ Domain ${data.domain} is correctly mapped to ${data.server_ip}`;
+                    domainResult.style.color = "green";
+                } else {
+                    domainResult.textContent = `⚠ Domain ${data.domain} is NOT mapped correctly. Should be ${data.server_ip}`;
+                    domainResult.style.color = "red";
+                }
+            } catch (err) {
+                domainResult.textContent = "❌ Error checking domain mapping";
+                domainResult.style.color = "red";
             }
         }
     </script>

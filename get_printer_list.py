@@ -74,10 +74,10 @@ def list_known_epos_printers(known=True):
             has_keyword_match = any(keyword in name_combined for keyword in KEYWORDS)
 
             # Skip logic
-            if known and not is_known_vendor:
-                continue
-            elif known and not (is_known_vendor or is_printer_interface or has_keyword_match):
-                continue
+            # if known and not is_known_vendor:
+            #     continue
+            # elif known and not (is_known_vendor or is_printer_interface or has_keyword_match):
+            #     continue
 
             printers.append({
                 "vendor_id": f"{vid:04x}",
@@ -86,7 +86,7 @@ def list_known_epos_printers(known=True):
                 "vendor_name": EPOS_PRINTERS.get(vid, "Unknown"),
                 "product": product,
                 "matched_by": (
-                    "No Filter Applied" if known === False else
+                    "No Filter Applied" if known == False else
                     "Vendor id" if is_known_vendor else
                     "Interface class" if is_printer_interface else
                     "Name keyword"
