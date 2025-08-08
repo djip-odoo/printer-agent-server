@@ -43,6 +43,20 @@ EPOS_PRINTERS = {
     0x0519: "Star Micronics",
 }
 
+SYSTEM_USB_KEYWORDS = {
+    # Linux
+    "linux", "xhci-hcd", "ehci-hcd", "root hub", "usb hub",
+    # Windows
+    "microsoft", "standard usb host controller", "usb root hub", "generic usb hub",
+    # macOS
+    "apple", "usb host controller", "usb high-speed bus"
+}
+
+def is_system_usb_device(manufacturer, product):
+    m = manufacturer.lower()
+    p = product.lower()
+    return any(k in m or k in p for k in SYSTEM_USB_KEYWORDS)
+
 KEYWORDS = ["printer", "thermal", "receipt", "pos", "rugtek", "xprinter"]
 def list_known_epos_printers(known=True):
     devices = usb.core.find(find_all=True)
@@ -71,13 +85,16 @@ def list_known_epos_printers(known=True):
             product = usb.util.get_string(device, device.iProduct) or "Unknown"
             name_combined = f"{manufacturer} {product}".lower()
 
+            if is_system_usb_device(manufacturer, product):
+                continue
+
             has_keyword_match = any(keyword in name_combined for keyword in KEYWORDS)
 
             # Skip logic
-            # if known and not is_known_vendor:
-            #     continue
-            # elif known and not (is_known_vendor or is_printer_interface or has_keyword_match):
-            #     continue
+            if known and not is_known_vendor:
+                continue
+            elif known and not (is_known_vendor or is_printer_interface or has_keyword_match):
+                continue
 
             printers.append({
                 "vendor_id": f"{vid:04x}",

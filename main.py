@@ -20,7 +20,7 @@ from fastapi.responses import HTMLResponse
 import ctypes
 import platform
 from ddl_path import load_libusb_backend
-from set_local_ip import setup_domain
+from set_local_ip import check_host
 
 # Load backend
 backend = load_libusb_backend()
@@ -94,6 +94,10 @@ async def printer_list(request: Request):
 def check_usb_status(req: StatusCheckRequest):
     return check_printer_status(req.vendor_id, req.product_id)
 
+@app.get("/check-host")
+def check_host_route():
+    return check_host() 
+
 # ========== Worker ==========
 def printer_worker():
     while True:
@@ -148,29 +152,35 @@ worker_thread.start()
 # ========== Main Entry ==========
 
 
-def register_mdns_service():
-    zeroconf, info, ip = setup_domain()
+# def register_mdns_service():
+#     zeroconf, info, ip = setup_domain()
 
-    # Store globally so we can close later
-    app.state.zeroconf = zeroconf
-    app.state.service_info = info
-    print(f"📢 mDNS Service Published: https://printer-server.local:8088 (IP: {ip})")
+#     # Store globally so we can close later
+#     app.state.zeroconf = zeroconf
+#     app.state.service_info = info
+#     print(f"📢 mDNS Service Published: https://printer-server.local:8088 (IP: {ip})")
+#     try:
+#         while True:
+#             time.sleep(1)
+#     except KeyboardInterrupt:
+#         pass
 
-@app.on_event("startup")
-async def startup_event():
-    # Run Zeroconf in its own thread
-    thread = threading.Thread(target=register_mdns_service, daemon=True)
-    thread.start()
+# @app.on_event("startup")
+# async def startup_event():
+#     # Run Zeroconf in its own thread
+#     thread = threading.Thread(target=register_mdns_service, daemon=True)
+#     thread.start()
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    if hasattr(app.state, "zeroconf"):
-        app.state.zeroconf.unregister_service(app.state.service_info)
-        app.state.zeroconf.close()
-        print("❌ mDNS Service Unregistered")
+# @app.on_event("shutdown")
+# async def shutdown_event():
+#     if hasattr(app.state, "zeroconf"):
+#         app.state.zeroconf.unregister_service(app.state.service_info)
+#         app.state.zeroconf.close()
+#         print("❌ mDNS Service Unregistered")
 
 if __name__ == "__main__":
     import uvicorn
+    check_host()
     ssl_dir = resource_path("ssl")
     uvicorn.run(
         app,

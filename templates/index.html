@@ -88,9 +88,9 @@
         <p><strong>Product:</strong> {{ p.product }}</p>
         <p><strong>Matched By:</strong> {{ p.matched_by }}</p>
 
-        <button class="check-btn" onclick="checkStatus('{{ p.vendor_id }}', '{{ p.product_id }}', {{ loop.index }})">
+        <!-- <button class="check-btn" onclick="checkStatus('{{ p.vendor_id }}', '{{ p.product_id }}', {{ loop.index }})">
             Check Status
-        </button>
+        </button> -->
         <div class="status-msg" id="status-{{ loop.index }}"></div>
     </div>
     {% endfor %}
